@@ -13,6 +13,7 @@ jobs:
       - name: Descarregar clips
         shell: bash
         run: |
+          sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg >/dev/null
           mkdir -p broll/clips
           while read -r nome url; do
             [ -z "$nome" ] && continue
