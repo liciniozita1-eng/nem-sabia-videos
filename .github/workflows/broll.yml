@@ -1,0 +1,27 @@
+name: broll
+on:
+  push:
+    branches: [broll-temp]
+    paths: [broll/lista.txt]
+permissions:
+  contents: write
+jobs:
+  baixar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descarregar clips
+        run: |
+          mkdir -p broll/clips
+          while read -r nome url; do
+            [ -z "$nome" ] && continue
+            curl -fsSL --retry 3 -o "broll/clips/$nome" "$url"
+          done < broll/lista.txt
+          ls -la broll/clips
+      - name: Guardar no ramo
+        run: |
+          git config user.name "broll-bot"
+          git config user.email "broll-bot@users.noreply.github.com"
+          git add broll/clips
+          git commit -m "clips b-roll [skip ci]" || true
+          git push
