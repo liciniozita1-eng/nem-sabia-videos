@@ -1,0 +1,27 @@
+name: recolher-voz
+on:
+  push:
+    branches: [broll-temp]
+    paths: [producao/recolher.txt]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  juntar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: arts
+          run-id: 45849364038
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Guardar no ramo
+        run: |
+          sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg >/dev/null
+          mkdir -p producao/L02/voz_pt
+          for f in arts/*/*.wav; do ffmpeg -nostdin -loglevel error -y -i "$f" -c:a flac -sample_fmt s16 "producao/L02/voz_pt/$(basename "${f%.wav}").flac"; done
+          cp arts/*/qc_*.json producao/L02/voz_pt/ || true
+          ls producao/L02/voz_pt | wc -l
+          git config user.name "broll-bot"; git config user.email "broll-bot@users.noreply.github.com"
+          git add producao/L02/voz_pt && git commit -m "voz PT L02 [skip ci]" && git pull --rebase && git push
