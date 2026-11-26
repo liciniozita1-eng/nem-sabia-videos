@@ -1,0 +1,43 @@
+name: voz-pt
+on:
+  push:
+    branches: [broll-temp]
+    paths: [producao/L02/frases_pt.json, producao/voz_pt.py]
+permissions:
+  contents: write
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0,1,2,3,4,5,6,7,8,9]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Instalar
+        run: |
+          pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install -q chatterbox-tts "setuptools<81" soundfile faster-whisper
+      - name: Gerar voz
+        run: python producao/voz_pt.py producao/L02/frases_pt.json ${{ matrix.shard }} 10 out
+      - uses: actions/upload-artifact@v4
+        with: { name: "voz-${{ matrix.shard }}", path: out }
+  juntar:
+    needs: gerar
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: arts }
+      - name: Guardar no ramo
+        run: |
+          sudo apt-get -qq install -y flac >/dev/null
+          mkdir -p producao/L02/voz_pt
+          for f in arts/*/*.wav; do flac -s -f -o "producao/L02/voz_pt/$(basename "${f%.wav}").flac" "$f"; done
+          cp arts/*/qc_*.json producao/L02/voz_pt/ || true
+          git config user.name "broll-bot"; git config user.email "broll-bot@users.noreply.github.com"
+          git add producao/L02/voz_pt && git commit -m "voz PT L02 [skip ci]" && git pull --rebase && git push
