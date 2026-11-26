@@ -11,11 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Descarregar clips
+        shell: bash
         run: |
           mkdir -p broll/clips
           while read -r nome url; do
             [ -z "$nome" ] && continue
-            curl -fsSL --retry 3 -o "broll/clips/$nome" "$url"
+            curl -fsSL --retry 3 -o "/tmp/$nome" "$url" || { echo "FALHOU $nome"; continue; }
+            ffmpeg -nostdin -loglevel error -y -t 25 -i "/tmp/$nome" -an -vf "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,fps=30" -c:v libx264 -preset veryfast -crf 27 -pix_fmt yuv420p "broll/clips/$nome"
+            rm -f "/tmp/$nome"
           done < broll/lista.txt
           ls -la broll/clips
       - name: Guardar no ramo
